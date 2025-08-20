@@ -1,0 +1,58 @@
+project:
+  id: "brazil-race-classifier"
+  region: "europe-west2"
+  zone: "europe-west2-a"
+
+gcs:
+  # Buckets
+  candidates_raw_bucket: "br-rc-candidates-raw-brazil-race-classifier"
+  candidates_processed_bucket: "br-rc-candidates-processed-brazil-race-classifier"
+  photos_bucket: "br-rc-photos-brazil-race-classifier"
+
+  # Object path conventions (prefixes/templates inside each bucket)
+  paths:
+    candidates_raw_template: "{year}/candidates_{year}.csv"   # per-year raw CSV
+    candidates_processed: "candidates_clean_all.csv"          # single cleaned CSV
+    photos_template: "{year}/{uf}/{sq_candidato}.jpg"         # extracted JPGs
+
+defaults:
+  encoding: "latin1"
+  delimiter: ";"
+  years:
+    - 2004
+    - 2008
+    - 2012
+    - 2014
+    - 2016
+    - 2018
+    - 2020
+    - 2022
+    - 2024
+  states:                                  
+    - AC
+    - AL
+    - AP
+    - AM
+    - BA
+    - CE
+    - DF
+    - ES
+    - GO
+    - MA
+    - MT
+    - MS
+    - MG
+    - PA
+    - PB
+    - PR
+    - PE
+    - PI
+    - RJ
+    - RN
+    - RS
+    - RO
+    - RR
+    - SC
+    - SP
+    - SE
+    - TO
