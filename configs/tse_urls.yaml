@@ -20,34 +20,34 @@ photos:
     2020: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes2020/fotos/foto_cand2020_{UF}_div.zip"
     2022: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes2022/fotos/foto_cand2022_{UF}_div.zip"
     2024: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes2024/fotos/foto_cand2024_{UF}_div.zip"
-  states:
-    - AC: "AC"
-    - AL: "AL"
-    - AM: "AM"
-    - AP: "AP"
-    - BA: "BA"
-    - CE: "CE"
-    - DF: "DF"
-    - ES: "ES"
-    - GO: "GO"
-    - MA: "MA"
-    - MG: "MG"
-    - MS: "MS"
-    - MT: "MT"
-    - PA: "PA"
-    - PB: "PB"
-    - PE: "PE"
-    - PI: "PI"
-    - PR: "PR"
-    - RJ: "RJ"
-    - RN: "RN"
-    - RO: "RO"
-    - RR: "RR"
-    - RS: "RS"
-    - SC: "SC"
-    - SE: "SE"
-    - SP: "SP"
-    - TO: "TO"
+  states:                                  
+    - AC
+    - AL
+    - AP
+    - AM
+    - BA
+    - CE
+    - DF
+    - ES
+    - GO
+    - MA
+    - MT
+    - MS
+    - MG
+    - PA
+    - PB
+    - PR
+    - PE
+    - PI
+    - RJ
+    - RN
+    - RS
+    - RO
+    - RR
+    - SC
+    - SP
+    - SE
+    - TO
     
 format: "zip"
 encoding: "latin1"
