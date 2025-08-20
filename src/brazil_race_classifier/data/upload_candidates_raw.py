@@ -5,6 +5,14 @@ from google.cloud import storage
 from tqdm import tqdm
 
 
+# Normalize bucket name
+def normalize_bucket_name(bucket: str) -> str:
+    """
+    Accept gs://bucket or bucket and return plain bucket name.
+    """
+    return bucket.replace("gs://", "").strip("/")
+
+
 # Download zip file from TSE url
 def read_tse_zip(url: str, target: str="BRASIL") -> pd.DataFrame:
     """
@@ -31,14 +39,6 @@ def read_tse_zip(url: str, target: str="BRASIL") -> pd.DataFrame:
                 return df
         else:
             raise Exception(f"Target file '{target_file}' not found in the zip archive.")
-
-
-# Normalize bucket name
-def normalize_bucket_name(bucket: str) -> str:
-    """
-    Accept gs://bucket or bucket and return plain bucket name.
-    """
-    return bucket.replace("gs://", "").strip("/")
 
 
 # Upload candidates data to GCS bucket
@@ -132,7 +132,7 @@ def main():
 
             # Define the destination path in GCS
             dest_path = f"{year}/candidates_{year}.csv"
-            
+
             # Upload the DataFrame to GCS
             upload_csv_to_gcs(bucket_name, dest_path, df, project_id)
             
