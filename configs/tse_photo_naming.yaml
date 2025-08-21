@@ -1,0 +1,16 @@
+photos:
+  filename_templates:
+    "2004": "F{state}{sequencial}_div.{extension}"
+    "2008": "F{state}{sequencial}_div.{extension}"
+    "2012": "{state}{sequencial}_div.{extension}"
+    "2014": "{state}{sequencial}_div.{extension}"
+    "2016": "F{state}{sequencial}_div.{extension}"
+    "2018": "F{state}{sequencial}_div.{extension}"
+    "2020": "F{state}{sequencial}_div.{extension}"
+    "2022": "F{state}{sequencial}_div.{extension}"
+    "2024": "F{state}{sequencial}_div.{extension}"
+
+  fields:
+    state: "Two-letter UF code (e.g., AC, AM, SP)"
+    sequencial: "Numeric sequence for the candidate within the UF/year"
+    extension: "jpg, jpeg or png"
