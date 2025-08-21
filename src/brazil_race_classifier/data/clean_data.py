@@ -214,8 +214,9 @@ def main():
     ap.add_argument("--raw-bucket", help="GCS raw candidates bucket (default: read from project.yaml)")
     ap.add_argument("--processed-bucket", help="GCS processed candidates bucket (default: read from project.yaml)")
     ap.add_argument("--output-name", default="candidates_clean_all.csv", help="Output filename in processed bucket")
+    ap.add_argument("--states", default="AC AM AP MA MT PA RO RR TO", help="List of states to include in clean data (default Amazon states)")
     args = ap.parse_args()
-
+    
     # Load cleaning schema
     with open(args.schema, "r") as f:
         schema = yaml.safe_load(f)
@@ -223,9 +224,10 @@ def main():
     # Define list of columns to keep with target names
     keep_columns = {col: schema["columns"][col]["target"] for col in schema["columns"]}
 
-    # Get relevant meta variables
+    # Get relevant variables
     encoding = schema["meta"]["output"]["encoding"]
-
+    states   = [s.strip().upper() for s in args.states.split()]
+    
     # Initiate GCS client
     client = storage.Client(project=args.project);
 
@@ -242,7 +244,10 @@ def main():
         # Read and clean CSV according to schema
         df = read_year_csv(client, bucket_name, page_prefix, project=args.project)
         df = clean_with_schema(df, schema)
-
+        
+        # Filter by states
+        df = df.query("state in @states")
+        
         # Append to list of DataFrames
         df_list.append(df)
 
