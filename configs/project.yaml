@@ -15,6 +15,10 @@ gcs:
     candidates_processed: "candidates_clean_all.csv"          # single cleaned CSV
     photos_template: "{year}/{uf}/{sq_candidato}.jpg"         # extracted JPGs
 
+isa:
+  # Instituto Socioambiental (ISA) indigenous peoples data url
+  url: "https://pib.socioambiental.org/pt/Quadro_Geral_dos_Povos"
+
 defaults:
   encoding: "latin1"
   delimiter: ";"
