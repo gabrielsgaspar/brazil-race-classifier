@@ -1,0 +1,211 @@
+meta:
+  input:
+    delimiter: ","
+    encoding: "latin-1"
+  output:
+    encoding: "utf-8"
+  notes: |
+    - Dtypes reflect the prior cleaning script. Text transforms use: lower, upper, strip, unidecode.
+    - "skip_na: true" means: if value is NaN, leave as-is (do not call string funcs).
+
+columns:
+
+  ANO_ELEICAO:
+    target: year
+    dtype: int
+    transforms:
+      - op: cast
+        to: int
+
+  NM_TIPO_ELEICAO:
+    target: election_type
+    dtype: string
+    transforms:
+      - op: lower
+      - op: unidecode
+      - op: strip
+
+  NR_TURNO:
+    target: round
+    dtype: int
+    transforms:
+      - op: cast
+        to: int
+
+  SG_UF:
+    target: state
+    dtype: string
+    transforms: []
+
+  SG_UE:
+    target: tse_municipality_id
+    dtype: string
+    transforms:
+      - op: cast
+        to: string
+
+  NM_UE:
+    target: municipality_name
+    dtype: string
+    transforms:
+      - op: lower
+      - op: unidecode
+
+  DS_CARGO:
+    target: office
+    dtype: string
+    transforms:
+      - op: lower
+      - op: unidecode
+
+  SQ_CANDIDATO:
+    target: sequencial
+    dtype: string
+    transforms:
+      - op: cast
+        to: string
+
+  NR_CPF_CANDIDATO:
+    target: cpf
+    dtype: string
+    transforms:
+      - op: cast
+        to: string
+
+  NR_CANDIDATO:
+    target: candidate_number
+    dtype: string
+    transforms:
+      - op: cast
+        to: string
+
+  NM_CANDIDATO:
+    target: candidate_name
+    dtype: string
+    transforms:
+      - op: lower
+      - op: unidecode
+      - op: strip
+
+  NM_URNA_CANDIDATO:
+    target: ballot_name
+    dtype: string
+    transforms:
+      - op: lower
+        skip_na: true
+      - op: unidecode
+        skip_na: true
+
+  DS_SITUACAO_CANDIDATURA:
+    target: cand_situation
+    dtype: string
+    transforms:
+      - op: lower
+      - op: unidecode
+
+  DS_DETALHE_SITUACAO_CAND:
+    target: cand_detail
+    dtype: string
+    transforms:
+      - op: lower
+      - op: unidecode
+
+  TP_AGREMIACAO:
+    target: type_coalition
+    dtype: string
+    transforms:
+      - op: lower
+      - op: unidecode
+
+  NR_PARTIDO:
+    target: cand_number
+    dtype: string
+    transforms:
+      - op: cast
+        to: string
+
+  SG_PARTIDO:
+    target: party
+    dtype: string
+    transforms:
+      - op: upper
+      - op: unidecode
+
+  DS_COMPOSICAO_COLIGACAO:
+    target: coalition
+    dtype: string
+    transforms:
+      - op: cast
+        to: string
+      - op: upper
+      - op: unidecode
+
+  NR_IDADE_DATA_POSSE:
+    target: age
+    dtype: string
+    transforms: []
+
+  DS_GENERO:
+    target: gender
+    dtype: string
+    transforms:
+      - op: lower
+      - op: unidecode
+
+  DS_GRAU_INSTRUCAO:
+    target: education
+    dtype: string
+    transforms:
+      - op: lower
+      - op: unidecode
+
+  DS_ESTADO_CIVIL:
+    target: married
+    dtype: string
+    transforms:
+      - op: lower
+      - op: unidecode
+
+  DS_COR_RACA:
+    target: race
+    dtype: string
+    transforms:
+      - op: lower
+      - op: unidecode
+
+  ST_REELEICAO:
+    target: reelection
+    dtype: string
+    transforms: []
+
+  DS_SITUACAO_CANDIDATO_PLEITO:
+    target: situation_candidate_in_ballot
+    dtype: string
+    transforms:
+      - op: lower
+      - op: unidecode
+
+  ST_CANDIDATO_INSERIDO_URNA:
+    target: candidate_in_ballot
+    dtype: string
+    transforms:
+      - op: lower
+      - op: unidecode
+
+  SG_UF_NASCIMENTO:
+    target: born_state
+    dtype: string
+    transforms: []
+
+  NM_MUNICIPIO_NASCIMENTO:
+    target: born_municipality_name
+    dtype: string
+    transforms:
+      - op: lower
+      - op: unidecode
+
+
+primary_key:
+  - year
+  - state
+  - sequencial
