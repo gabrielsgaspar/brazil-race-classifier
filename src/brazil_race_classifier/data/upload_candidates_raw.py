@@ -2,6 +2,7 @@
 import argparse, io, os, re, requests, yaml, zipfile
 import pandas as pd
 from google.cloud import storage
+from typing import List, Optional
 from tqdm import tqdm
 
 
@@ -24,7 +25,10 @@ def read_tse_zip(url: str, target: str="BRASIL") -> pd.DataFrame:
         raise Exception(f"Failed to download file from {url}. Status code: {res.status_code}")
     
     # Extract file name structure from url and set target file name
-    file_structure = re.search(r"(consulta_cand_\d{4})", url).group(1)
+    match = re.search(r"(consulta_cand_\d{4})", url)
+    if not match:
+        raise Exception(f"Could not extract file structure from URL: {url}")
+    file_structure = match.group(1)
     target_file    = f"{file_structure}_{target.upper()}.csv"
 
     # Read target csv file from the zip archive
@@ -57,7 +61,7 @@ def upload_csv_to_gcs(bucket_name: str, dest_path: str, df: pd.DataFrame, projec
 
 
 # Function for CLI command to download TSE candidates and upload to GCS
-def run_download_candidates(*, config: str = "configs/tse_urls.yaml", bucket: str, project: str, years: list[str] | None = None) -> int:
+def run_download_candidates(*, config: str, bucket: str, project: str, years: list[str] | None = None) -> int:
     """
     Same behavior as main(), but callable from code/CLI without argparse.
     Returns 0 on success, 1 if any year fails.
