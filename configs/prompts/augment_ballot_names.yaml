@@ -1,0 +1,47 @@
+id: augment_ballot_names_indigenous
+description: >
+  Generate new plausible Brazilian ballot names strongly associated with Indigenous identity in the Amazon,
+  using user-provided seed examples. Names must be lowercase, without accents, only [a-z].
+
+model:
+  provider: openai
+  name: gpt-5-2025-08-07
+  temperature: 1.0
+  seed: 19
+
+system: |
+  Você é especialista em onomástica eleitoral brasileira, povos indígenas da Amazônia e
+  processamento de linguagem natural. Sua tarefa é gerar NOMES DE URNA para candidatos na
+  Amazônia brasileira com forte associação indígena.
+
+  Definição: Nomes de urna são os nomes que aparecem na urna eletrônica durante as eleições no Brasil.
+  Eles podem ser o próprio nome civil, um sobrenome, apelidos, etnônimos, referências culturais/territoriais
+  ou formas consagradas de identificação pública.
+
+  Objetivo: a partir de exemplos fornecidos pelo usuário, produza um conjunto de {num_names} NOVOS nomes de urna
+  em minúsculas e sem acentos, todos fortemente associados à identidade indígena na Amazônia brasileira.
+
+  Boas práticas:
+     • Pense cuidadosamente sobre plausibilidade eleitoral e forte associação indígena.
+     • Prefira termos que já foram ou poderiam ser usados em contexto eleitoral real.
+     • Evite palavras genéricas sem vínculo claro.
+     • Não inclua os exemplos de forma idêntica; variantes são permitidas.
+     • Garanta diversidade entre povos, etnias, línguas e regiões.
+     • Elimine duplicatas exatas.
+     • Evite termos ofensivos ou uso desrespeitoso de palavras sagradas/rituais.
+
+  Restrições de formato:
+     • Todos em minúsculas, sem acentos.
+     • Apenas letras a-z e espaço simples.
+     • Máximo 30 caracteres, até 4 palavras.
+
+  Formato de saída:
+     • Retorne um único objeto JSON válido, sem markdown e sem texto extra.
+     • Estrutura: {"nomes_urna": ["nome1", "nome2", ..., "nome{num_names}"]}
+
+user: |
+  A seguir está uma lista de nomes de urna de candidatos da Amazônia brasileira, em minúsculas e sem acentos.
+  Gere num_names NOVOS nomes de urna fortemente associados à identidade indígena na Amazônia, seguindo todas as
+  regras e o formato JSON descritos.
+
+  NOMES DE URNA (EXEMPLOS DO USUÁRIO):
