@@ -19,17 +19,21 @@ def normalize_bucket_name(bucket: str) -> str:
 
 
 # Upload candidates data to GCS bucket
-def upload_csv_to_gcs(client: storage.Client, bucket_name: str, dest_path: str, encoding: str, df: pd.DataFrame) -> None:
+def upload_parquet_to_gcs(client: storage.Client, bucket_name: str, dest_path: str, df: pd.DataFrame) -> None:
     """
-    Uploads a local CSV file to a specified GCS bucket and path.
+    Uploads a parquet file to a specified GCS bucket and path.
     """
     # Initiate GCS client and get the bucket
     bucket = client.bucket(bucket_name)
     blob   = bucket.blob(dest_path)
 
-    # Write DataFrame to bytes and upload to GCS
-    csv_bytes = df.to_csv(index=False, encoding=encoding)
-    blob.upload_from_string(csv_bytes, content_type="text/csv")
+    # Write DataFrame to a buffer in Parquet format
+    buffer = io.BytesIO()
+    df.to_parquet(buffer, index=False, engine="pyarrow")
+    buffer.seek(0)
+
+    # Upload buffer to GCS
+    blob.upload_from_file(buffer, content_type="application/octet-stream")
 
 
 # Main function to clean data and upload TSE candidate data to GCS
@@ -39,17 +43,26 @@ def main():
     """
     # Parse command line arguments
     ap = argparse.ArgumentParser(description="Scrape indigenous names from ISA and upload CSV to GCS.")
+    ap.add_argument("--schema", default="configs/cleaning/cleaning_schema.yaml", help="Path to YAML with cleaning schema")
     ap.add_argument("--project", help="GCP project ID (default: read from configs/project.yaml)")
-    ap.add_argument("--processed-bucket", help="GCS processed candidates bucket (default: read from project.yaml)")
-    ap.add_argument("--output_name", default="isa_names.csv", help="Output filename in processed bucket")
+    ap.add_argument("--processed_bucket", help="GCS processed candidates bucket (default: read from project.yaml)")
+    ap.add_argument("--output_name", default="isa_names", help="Output filename in processed bucket")
     ap.add_argument("--isa_url", default="https://pib.socioambiental.org/pt/Quadro_Geral_dos_Povos", help="ISA URL with names of indigenous peoples")
     args = ap.parse_args()
+
+    # Load cleaning schema
+    with open(args.schema, "r") as f:
+        schema = yaml.safe_load(f)
 
     # Request the ISA page and check for successful response
     res = requests.get(args.isa_url)
     if res.status_code != 200:
         raise Exception(f"Failed to download page from {args.isa_url}. Status code: {res.status_code}")
     
+    # Get relevant variables
+    encoding    = schema["meta"]["output"]["encoding"]
+    output_name = f"{args.output_name}.parquet"
+
     # Parse tables into a list of DataFrames and pick first table
     tables = pd.read_html(StringIO(res.text))
     df     = tables[0]
@@ -93,9 +106,11 @@ def main():
     # Upload to GCS processed bucket
     client = storage.Client(project=args.project)
     processed_bucket = normalize_bucket_name(args.processed_bucket)
-    upload_csv_to_gcs(client, processed_bucket, args.output_name, "utf-8", df_names)
+    upload_parquet_to_gcs(client, processed_bucket, output_name, df_names)
     
-    
+    # Save to data folder locally
+    df.to_parquet(f"./data/tse/{output_name}", index=False, engine="pyarrow")
+
 # Run script directly
 if __name__ == "__main__":
     main()

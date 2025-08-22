@@ -17,12 +17,12 @@ def normalize_bucket_name(bucket: str) -> str:
 
 
 # Read candidate data
-def read_blob_csv_as_df(client: storage.Client, bucket_name: str, blob_name: str) -> pd.DataFrame:
-    """Download a CSV blob as bytes and read into pandas with dtype=str."""
+def read_blob_parquet_as_df(client: storage.Client, bucket_name: str, blob_name: str) -> pd.DataFrame:
+    """Download a Parquet blob as bytes and read into pandas."""
     bucket = client.bucket(bucket_name)
     blob   = bucket.blob(blob_name)
     data   = blob.download_as_bytes()
-    return pd.read_csv(io.BytesIO(data), encoding="latin-1", dtype=str, low_memory=False)
+    return pd.read_parquet(io.BytesIO(data), engine="pyarrow")
 
 
 # Apply a series of transformations from YAML schema to a pandas Series
@@ -162,10 +162,10 @@ def list_page_prefixes(client: storage.Client, bucket_name: str, project: str | 
 
 
 # Read TSE candidate data from bucket path
-def read_year_csv(client: storage.Client, bucket_name: str, page_prefix: str, project: str | None = None) -> pd.DataFrame:
+def read_year_parquet(client: storage.Client, bucket_name: str, page_prefix: str, project: str | None = None) -> pd.DataFrame:
     """
-    Read the CSV for a given year prefix (e.g. '2024/') into a DataFrame.
-    Tries the canonical name 'candidates_<year>.csv', falls back to the first *.csv under the prefix.
+    Read the Parquet for a given year prefix (e.g. '2024/') into a DataFrame.
+    Tries the canonical name 'candidates_<year>.parquet', falls back to the first *.parquet under the prefix.
     """
     # Link the bucket
     bucket = client.bucket(bucket_name)
@@ -177,29 +177,33 @@ def read_year_csv(client: storage.Client, bucket_name: str, page_prefix: str, pr
     if not blob.exists(client=client):
         # Fallback: first CSV under the prefix
         for b in client.list_blobs(bucket_name, prefix=page_prefix):
-            if b.name.lower().endswith(".csv"):
+            if b.name.lower().endswith(".parquet"):
                 blob = b
                 break
         else:
-            raise FileNotFoundError(f"No CSV found under gs://{bucket_name}/{page_prefix}")
+            raise FileNotFoundError(f"No Parquet found under gs://{bucket_name}/{page_prefix}")
 
     # Get data and return pandas DataFrame
     data = blob.download_as_bytes()
-    return pd.read_csv(io.BytesIO(data), encoding="latin-1",sep=",", dtype=str, low_memory=False)
+    return pd.read_parquet(io.BytesIO(data), engine="pyarrow")
 
 
 # Upload candidates data to GCS bucket
-def upload_csv_to_gcs(client: storage.Client, bucket_name: str, dest_path: str, encoding: str, df: pd.DataFrame) -> None:
+def upload_parquet_to_gcs(client: storage.Client, bucket_name: str, dest_path: str, df: pd.DataFrame) -> None:
     """
-    Uploads a local CSV file to a specified GCS bucket and path.
+    Uploads a parquet file to a specified GCS bucket and path.
     """
     # Initiate GCS client and get the bucket
     bucket = client.bucket(bucket_name)
     blob   = bucket.blob(dest_path)
 
-    # Write DataFrame to bytes and upload to GCS
-    csv_bytes = df.to_csv(index=False, encoding=encoding)
-    blob.upload_from_string(csv_bytes, content_type="text/csv")
+    # Write DataFrame to a buffer in Parquet format
+    buffer = io.BytesIO()
+    df.to_parquet(buffer, index=False, engine="pyarrow")
+    buffer.seek(0)
+
+    # Upload buffer to GCS
+    blob.upload_from_file(buffer, content_type="application/octet-stream")
 
 
 # Main function to clean data and upload TSE candidate data to GCS
@@ -209,11 +213,11 @@ def main():
     """
     # Parse command line arguments
     ap = argparse.ArgumentParser(description="Download TSE candidate ZIPs and upload raw CSVs to GCS.")
-    ap.add_argument("--schema", default="configs/cleaning_schema.yaml", help="Path to YAML with cleaning schema")
+    ap.add_argument("--schema", default="configs/cleaning/cleaning_schema.yaml", help="Path to YAML with cleaning schema")
     ap.add_argument("--project", help="GCP project ID (default: read from configs/project.yaml)")
-    ap.add_argument("--raw-bucket", help="GCS raw candidates bucket (default: read from project.yaml)")
-    ap.add_argument("--processed-bucket", help="GCS processed candidates bucket (default: read from project.yaml)")
-    ap.add_argument("--output-name", default="candidates_clean_all.csv", help="Output filename in processed bucket")
+    ap.add_argument("--raw_bucket", help="GCS raw candidates bucket (default: read from project.yaml)")
+    ap.add_argument("--processed_bucket", help="GCS processed candidates bucket (default: read from project.yaml)")
+    ap.add_argument("--output_name", default="candidates_clean", help="Output filename in processed bucket")
     ap.add_argument("--states", default="AC AM AP MA MT PA RO RR TO", help="List of states to include in clean data (default Amazon states)")
     args = ap.parse_args()
     
@@ -225,9 +229,10 @@ def main():
     keep_columns = {col: schema["columns"][col]["target"] for col in schema["columns"]}
 
     # Get relevant variables
-    encoding = schema["meta"]["output"]["encoding"]
-    states   = [s.strip().upper() for s in args.states.split()]
-    
+    encoding    = schema["meta"]["output"]["encoding"]
+    states      = [s.strip().upper() for s in args.states.split()]
+    output_name = f"{args.output_name}.parquet"
+
     # Initiate GCS client
     client = storage.Client(project=args.project);
 
@@ -239,10 +244,10 @@ def main():
     df_list = []
 
     # Go through each page prefix (year) and read the CSV
-    for page_prefix in tqdm(page_prefixes, desc="Processing year CSVs"):
+    for page_prefix in tqdm(page_prefixes, desc="Processing year files"):
 
         # Read and clean CSV according to schema
-        df = read_year_csv(client, bucket_name, page_prefix, project=args.project)
+        df = read_year_parquet(client, bucket_name, page_prefix, project=args.project)
         df = clean_with_schema(df, schema)
         
         # Filter by states
@@ -258,8 +263,10 @@ def main():
 
     # Upload to GCS processed bucket
     processed_bucket = normalize_bucket_name(args.processed_bucket)
-    upload_csv_to_gcs(client, processed_bucket, "candidates_all_clean.csv", encoding, df)
+    upload_parquet_to_gcs(client, processed_bucket, output_name, df)
     
+    # Save to data folder locally
+    df.to_parquet(f"./data/tse/{output_name}", index=False, engine="pyarrow")
 
 # Run script directly
 if __name__ == "__main__":

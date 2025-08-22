@@ -46,18 +46,21 @@ def read_tse_zip(url: str, target: str="BRASIL") -> pd.DataFrame:
 
 
 # Upload candidates data to GCS bucket
-def upload_csv_to_gcs(bucket_name: str, dest_path: str, df: pd.DataFrame, project_id: str) -> None:
+def upload_parquet_to_gcs(client: storage.Client, bucket_name: str, dest_path: str, df: pd.DataFrame, project_id: str) -> None:
     """
     Uploads a local CSV file to a specified GCS bucket and path.
     """
-    # Initiate GCS client and get the bucket
-    client = storage.Client(project=project_id)
+    # Get the bucket
     bucket = client.bucket(bucket_name)
     blob   = bucket.blob(dest_path)
 
-    # Write DataFrame to bytes and upload to GCS
-    csv_bytes = df.to_csv(index=False, encoding="latin-1").encode("latin-1")
-    blob.upload_from_string(csv_bytes, content_type="text/csv")
+    # Write DataFrame to a buffer in Parquet format
+    buffer = io.BytesIO()
+    df.to_parquet(buffer, index=False, engine="pyarrow")
+    buffer.seek(0)
+
+    # Upload buffer to GCS
+    blob.upload_from_file(buffer, content_type="application/octet-stream")
 
 
 # Function for CLI command to download TSE candidates and upload to GCS
@@ -76,6 +79,12 @@ def run_download_candidates(*, config: str, bucket: str, project: str, years: li
     with open(config, "r", encoding="utf-8") as f:
         urls = yaml.safe_load(f) or {}
 
+    # Get relevant variables
+    states = [s.strip().upper() for s in args.states.split()]
+
+    # Initiate GCS client
+    client = storage.Client(project=project_id)
+
     # Get candidates URLs and keep only the specified years if provided
     candidates_urls = urls.get("candidates", {}) or {}
     if years:
@@ -91,8 +100,9 @@ def run_download_candidates(*, config: str, bucket: str, project: str, years: li
     for year, url in tqdm(candidates_urls.items(), desc="Downloading candidates data"):
         try:
             df        = read_tse_zip(url)  # your existing helper
-            dest_path = f"{year}/candidates_{year}.csv"
-            upload_csv_to_gcs(bucket_name, dest_path, df, project_id)
+            df        = df.query("SG_UF in @states")
+            dest_path = f"{year}/candidates_{year}.parquet"
+            upload_parquet_to_gcs(client, bucket_name, dest_path, df, project_id)
         except Exception as e:
             any_failed = True
             print(f"Error processing year {year}: {e}")
@@ -109,15 +119,22 @@ def main():
     """
     # Parse command line arguments
     ap = argparse.ArgumentParser(description="Download TSE candidate ZIPs and upload raw CSVs to GCS.")
-    ap.add_argument("--config", default="configs/tse_urls.yaml", help="Path to YAML with candidates URLs")
+    ap.add_argument("--config", default="configs/tse/tse_urls.yaml", help="Path to YAML with candidates URLs")
     ap.add_argument("--bucket", required=True, help="GCS bucket name or gs://bucket for RAW candidates")
     ap.add_argument("--years", nargs="*", help="Optional list of years to process (e.g., 2016 2020 2024)")
+    ap.add_argument("--states", default="AC AM AP MA MT PA RO RR TO", help="List of states to include in clean data (default Amazon states)")
     ap.add_argument("--project", required=True, help="GCP project ID (overrides env/default)")
     args = ap.parse_args()
 
     # Load candidates URLs from the configuration file
     with open(args.config, "r") as f:
         urls = yaml.safe_load(f)
+
+    # Get relevant variables
+    states = [s.strip().upper() for s in args.states.split()]
+
+    # Initiate GCS client
+    client = storage.Client(project=project_id)
 
     # Get candidates URLs and keep only the specified years if provided
     candidates_urls = urls.get("candidates", {})
@@ -131,14 +148,15 @@ def main():
     # Download and process each candidate URL by year
     for year, url in tqdm(candidates_urls.items(), desc="Downloading candidates data"):
         try:
-            # Read the TSE zip file and extract the DataFrame
+            # Read the TSE zip file and extract the DataFrame and filter states
             df = read_tse_zip(url)
+            df = df.query("SG_UF in @states")
 
             # Define the destination path in GCS
-            dest_path = f"{year}/candidates_{year}.csv"
+            dest_path = f"{year}/candidates_{year}.parquet"
 
             # Upload the DataFrame to GCS
-            upload_csv_to_gcs(bucket_name, dest_path, df, project_id)
+            upload_parquet_to_gcs(client, bucket_name, dest_path, df, project_id)
             
         except Exception as e:
             print(f"Error processing year {year}: {e}")
