@@ -1,0 +1,55 @@
+candidates:
+  # URL to zip files from TSE
+  2004: "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2004.zip"
+  2008: "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2008.zip"
+  2012: "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2012.zip"
+  2014: "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2014.zip"
+  2016: "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2016.zip"
+  2018: "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2018.zip"
+  2020: "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2020.zip"
+  2022: "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2022.zip"
+  2024: "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2024.zip"
+
+photos:
+  # URL to candidate profile photos by state and year
+  templates:
+    2004: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes2004/fotos/foto_cand2004_{UF}_div.zip"
+    2008: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes2008/fotos/foto_cand2008_{UF}_div.zip"
+    2012: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes2012/fotos/foto_cand2012_{UF}_div.zip"
+    2014: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes2014/fotos/foto_cand2014_{UF}_div.zip"
+    2016: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes2016/fotos/foto_cand2016_{UF}_div.zip"
+    2018: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes2018/fotos/foto_cand2018_{UF}_div.zip"
+    2020: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes2020/fotos/foto_cand2020_{UF}_div.zip"
+    2022: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes2022/fotos/foto_cand2022_{UF}_div.zip"
+    2024: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes2024/fotos/foto_cand2024_{UF}_div.zip"
+  states:                                  
+    - AC
+    - AL
+    - AP
+    - AM
+    - BA
+    - CE
+    - DF
+    - ES
+    - GO
+    - MA
+    - MT
+    - MS
+    - MG
+    - PA
+    - PB
+    - PR
+    - PE
+    - PI
+    - RJ
+    - RN
+    - RS
+    - RO
+    - RR
+    - SC
+    - SP
+    - SE
+    - TO
+    
+format: "zip"
+encoding: "latin1"
