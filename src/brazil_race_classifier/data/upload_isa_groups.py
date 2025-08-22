@@ -42,11 +42,11 @@ def main():
     Main function to download, clean and upload TSE candidate data to GCS.
     """
     # Parse command line arguments
-    ap = argparse.ArgumentParser(description="Scrape indigenous names from ISA and upload CSV to GCS.")
+    ap = argparse.ArgumentParser(description="Scrape indigenous groups names from ISA and upload Parquet to GCS.")
     ap.add_argument("--schema", default="configs/cleaning/cleaning_schema.yaml", help="Path to YAML with cleaning schema")
     ap.add_argument("--project", help="GCP project ID (default: read from configs/project.yaml)")
     ap.add_argument("--processed_bucket", help="GCS processed candidates bucket (default: read from project.yaml)")
-    ap.add_argument("--output_name", default="isa_names", help="Output filename in processed bucket")
+    ap.add_argument("--output_name", default="isa_groups", help="Output filename in processed bucket")
     ap.add_argument("--isa_url", default="https://pib.socioambiental.org/pt/Quadro_Geral_dos_Povos", help="ISA URL with names of indigenous peoples")
     args = ap.parse_args()
 
