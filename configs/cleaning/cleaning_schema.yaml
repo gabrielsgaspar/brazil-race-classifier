@@ -83,18 +83,19 @@ columns:
     target: candidate_name
     dtype: string
     transforms:
-      - op: lower
-      - op: unidecode
+      #- op: lower
+      #- op: unidecode
       - op: strip
 
   NM_URNA_CANDIDATO:
     target: ballot_name
     dtype: string
     transforms:
-      - op: lower
-        skip_na: true
-      - op: unidecode
-        skip_na: true
+      #- op: lower
+      #  skip_na: true
+      #- op: unidecode
+      #  skip_na: true
+      - op: strip
 
   DS_SITUACAO_CANDIDATURA:
     target: cand_situation
