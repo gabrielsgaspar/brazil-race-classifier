@@ -72,45 +72,13 @@ def main():
     names  = []
 
     # Keep only relevant columns and rename them
-    df = df[pd.to_numeric(df["#"], errors="coerce").notna()]
-    df = df[["Nomes", "Outros nomes ou grafias"]]
-
-    # Iterate over rows to clean names
-    for i in df.index:
-        name_raw = df.loc[i, "Nomes"]
-        name_str = str(name_raw).strip()#.lower()
-        name     = name_str
-        #name     = unidecode(name_str)
-
-        # Find all text inside parentheses
-        parens = re.findall(r"\((.*?)\)", name)
-        
-        # Append each parenthesis content (if any)
-        for p in parens:
-            names.append(p.strip())
-            
-        # Remove the parentheses (and their contents) from the original name
-        name = re.sub(r"\(.*?\)", "", name).strip()
-        names.append(name)
-
-        # Go over alternative names
-        if not pd.isna(df.loc[i, "Outros nomes ou grafias"]):
-            for j in str(df.loc[i, "Outros nomes ou grafias"]).split(","):
-                j = j.strip().lower()
-                j = unidecode(j)
-                if j:
-                    names.append(j)
-
-    # Remove duplicates and sort names
-    names = set(names)
-
-    # Create a DataFrame and upload to GCS
-    df_names = pd.DataFrame({"name": sorted(names)})
-
+    df_isa = df[pd.to_numeric(df["#"], errors="coerce").notna()].copy()
+    df_isa = df_isa[["Nomes", "Outros nomes ou grafias", "Família linguística"]]
+    
     # Upload to GCS processed bucket
     client = storage.Client(project=args.project)
     processed_bucket = normalize_bucket_name(args.processed_bucket)
-    upload_parquet_to_gcs(client, processed_bucket, output_name_isa, df_names)
+    upload_parquet_to_gcs(client, processed_bucket, output_name_isa, df_isa)
     
     # Save to data folder locally
     df.to_parquet(f"./data/isa/{output_name_isa}", index=False, engine="pyarrow")
