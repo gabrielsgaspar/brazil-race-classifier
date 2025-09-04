@@ -1,0 +1,3 @@
+names:
+  isa_names: ["akratikateje", "asurini", "enawene", "ka apor", "kanela", "karaja", "karaja", "karipuna", "karipuna", "karipunas", "karipunas", "kariri", "katukina", "katukina", "kykateje", "parkateje", "pykopje", "wai wai"]
+  exclude_tokens: ["bispo","cabo","caboca","cabocla","caboclo","caboco","coordenador","coordenadora","delegada","delegado","dj","doutor","doutora","dr","enfermeira","enfermeiro","irma","irmao","lider","pastor","pastora","policial","prof","professor","professora","sargento"]
