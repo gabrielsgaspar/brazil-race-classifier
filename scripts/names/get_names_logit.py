@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import argparse, io, json, nltk, os, re, requests, yaml, zipfile
+import argparse, io, json, nltk, os, re, requests, unicodedata, yaml, zipfile
 import pandas as pd
 import numpy as np
+from collections import defaultdict
 from nltk.corpus import stopwords
 from dotenv import load_dotenv
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -18,6 +19,40 @@ nltk.download("stopwords")
 stopwords_pt = stopwords.words("portuguese")
 
 
+# Normalize strings
+def normalize(s: str) -> str:
+    """
+    Normalizes a string: lowercases, removes accents, keeps only letters, numbers and spaces
+    """
+    if s is None:
+        return ""
+    s = s.strip().lower()
+    s = "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
+    
+    # Keep letters, numbers and spaces
+    s = re.sub(r"[^a-z0-9 ]+", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+
+# Tokenize strings
+def tokenize(text: str) -> list:
+    """
+    Tokenizes a string into alphanumeric tokens
+    """
+    # simple alnum tokens
+    return re.findall(r"[a-z0-9]+", text)
+
+
+# Generate ngrams from tokens
+def ngrams_from_tokens(tokens, n=1) -> list:
+    """
+    Generates ngrams from a list of tokens
+    """
+    if n == 1:
+        return tokens
+    return [" ".join(tokens[i:i+n]) for i in range(len(tokens)-n+1)]
+
 # Function to drop common names from a string
 def drop_common_names(text: str, rx: re.Pattern)-> str | None:
     """
@@ -28,6 +63,119 @@ def drop_common_names(text: str, rx: re.Pattern)-> str | None:
     cleaned = rx.sub("", text)
     cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
     return cleaned.strip() if cleaned else None
+
+
+# Function to compute Levenshtein distance
+def levenshtein(a: str, b: str) -> int:
+    """
+    Computes the Levenshtein distance between two strings
+    """
+    # Efficient Wagner–Fischer with two rows
+    if a == b:
+        return 0
+    la, lb = len(a), len(b)
+    if la == 0: return lb
+    if lb == 0: return la
+
+    # Ensure b is shorter to save memory
+    if lb > la:
+        a, b = b, a
+        la, lb = lb, la
+    prev = list(range(lb + 1))
+    
+    # Compute distances
+    for i in range(1, la + 1):
+        curr = [i]
+        ca = a[i-1]
+        for j in range(1, lb + 1):
+            cost = 0 if ca == b[j-1] else 1
+            curr.append(min(
+                prev[j] + 1,     # deletion
+                curr[j-1] + 1,   # insertion
+                prev[j-1] + cost # substitution
+            ))
+        prev = curr
+    return prev[-1]
+
+
+# Function to compute similarity ratio
+def sim_ratio(a: str, b: str) -> float:
+    """
+    Computes similarity ratio between two strings based on Levenshtein distance
+    """
+    # 1 - (edit_distance / max_len)
+    m = max(len(a), len(b))
+    if m == 0: 
+        return 1.0
+    return 1.0 - (levenshtein(a, b) / m)
+
+
+# Function to build ngram index
+def build_ngram_index(df: pd.DataFrame, text_col: str):
+    """
+    Builds an ngram index from a dataframe column
+    """
+    ngram_to_rows = defaultdict(set)
+    ngram_type = {}
+    for idx, raw in df[text_col].fillna("").items():
+        norm = normalize(raw)
+        toks = tokenize(norm)
+        unis = ngrams_from_tokens(toks, 1)
+        bis  = ngrams_from_tokens(toks, 2)
+        for g in unis:
+            ngram_to_rows[g].add(idx)
+            ngram_type[g] = "unigram"
+        for g in bis:
+            ngram_to_rows[g].add(idx)
+            ngram_type[g] = "bigram"
+    return ngram_to_rows, ngram_type
+
+
+# Function to find close ngrams
+def find_close_ngrams(df: pd.DataFrame, text_col: str, possible_names: list[str], min_ratio: float = 0.86, short_len_max_edits: int = 1, long_len_max_edits: int = 2, short_len_thresh: int = 6, length_diff_cap: int = 2) -> pd.DataFrame:
+    """
+    Finds close ngrams in a dataframe column for a list of possible names
+    """
+
+    # Build ngram index
+    ngram_to_rows, ngram_type = build_ngram_index(df, text_col)
+    all_ngrams = list(ngram_to_rows.keys())
+
+    # Find close ngrams
+    results = []
+    for raw_q in possible_names:
+        q = normalize(raw_q)
+        if not q:
+            continue
+        Lq = len(q)
+        max_edits = short_len_max_edits if Lq <= short_len_thresh else long_len_max_edits
+
+        # Cheap prefilter: keep only ngrams with similar length
+        candidates = [g for g in all_ngrams if abs(len(g) - Lq) <= max(length_diff_cap, max_edits)]
+
+        for g in candidates:
+            d = levenshtein(q, g)
+            r = 1.0 - d / max(len(q), len(g))
+            if (d <= max_edits) or (r >= min_ratio):
+                rows = sorted(ngram_to_rows[g])
+                results.append({"query"               : raw_q,
+                                "query_norm"          : q,
+                                "candidate"           : g,
+                                "ngram_type"          : ngram_type[g],
+                                "edit_distance"       : d,
+                                "similarity"          : round(r, 3),
+                                "n_rows"              : len(rows),
+                                "example_rows"        : rows[:5],
+                                "example_ballot_names": [df.loc[i, text_col] for i in rows[:3]],
+                            })
+
+    # Convert to dataframe
+    if not results:
+        return pd.DataFrame(columns=["query","query_norm","candidate","ngram_type", "edit_distance","similarity","n_rows","example_rows","example_ballot_names"])
+
+    # Sort results
+    out = (pd.DataFrame(results).sort_values(["query", "edit_distance", "similarity"], ascending=[True, True, False]).reset_index(drop=True))
+    return out
 
 
 # Main function to train logit and create classification
@@ -150,6 +298,10 @@ def main():
         res_dict = json.loads(response.choices[0].message.content)
         with open(save_path + f"gpt_name_scores_loop{i+1}.json", "w", encoding="utf-8") as f:
             json.dump(res_dict, f, ensure_ascii=False, indent=2)
+
+    # Optional code to get close ngrams for manual review - NOT EXECUTED IN SCRIPT
+    # matches = find_close_ngrams(df, "ballot_name", possible_names) # possible_names is a list of names manually checked strings
+    # Use the code above to find similar strings, misspellings, etc. for manual review and add to list with indigenous strings
 
 
 # Run script directly
