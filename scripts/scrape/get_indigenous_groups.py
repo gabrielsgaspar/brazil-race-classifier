@@ -42,12 +42,14 @@ def main():
     Main function to download, clean and upload TSE candidate data to GCS.
     """
     # Parse command line arguments
-    ap = argparse.ArgumentParser(description="Scrape indigenous groups names from ISA and upload Parquet to GCS.")
+    ap = argparse.ArgumentParser(description="Scrape indigenous groups names from ISA and MPE and upload Parquet to GCS.")
     ap.add_argument("--schema", default="configs/cleaning/cleaning_schema.yaml", help="Path to YAML with cleaning schema")
     ap.add_argument("--project", help="GCP project ID (default: read from configs/project.yaml)")
     ap.add_argument("--processed_bucket", help="GCS processed candidates bucket (default: read from project.yaml)")
-    ap.add_argument("--output_name", default="isa_groups", help="Output filename in processed bucket")
+    ap.add_argument("--output_name_isa", default="isa_groups", help="Output filename in processed bucket")
+    ap.add_argument("--output_name_mpe", default="mpe_groups", help="Output filename in processed bucket")
     ap.add_argument("--isa_url", default="https://pib.socioambiental.org/pt/Quadro_Geral_dos_Povos", help="ISA URL with names of indigenous peoples")
+    ap.add_argument("--mpe_url", default="https://www.gov.br/funai/pt-br/acesso-a-informacao/dados-abertos/base-de-dados/Lista_Etnias___Nota_Tecnica_Conjunta_1.2019___Funai.IBGE.SESAI.SAGI.csv/@@download/file", help="MPE URL with names of indigenous peoples")
     args = ap.parse_args()
 
     # Load cleaning schema
@@ -60,8 +62,9 @@ def main():
         raise Exception(f"Failed to download page from {args.isa_url}. Status code: {res.status_code}")
     
     # Get relevant variables
-    encoding    = schema["meta"]["output"]["encoding"]
-    output_name = f"{args.output_name}.parquet"
+    encoding        = schema["meta"]["output"]["encoding"]
+    output_name_isa = f"{args.output_name_isa}.parquet"
+    output_name_mpe = f"{args.output_name_mpe}.parquet"
 
     # Parse tables into a list of DataFrames and pick first table
     tables = pd.read_html(StringIO(res.text))
@@ -107,10 +110,16 @@ def main():
     # Upload to GCS processed bucket
     client = storage.Client(project=args.project)
     processed_bucket = normalize_bucket_name(args.processed_bucket)
-    upload_parquet_to_gcs(client, processed_bucket, output_name, df_names)
+    upload_parquet_to_gcs(client, processed_bucket, output_name_isa, df_names)
     
     # Save to data folder locally
-    df.to_parquet(f"./data/tse/{output_name}", index=False, engine="pyarrow")
+    df.to_parquet(f"./data/isa/{output_name_isa}", index=False, engine="pyarrow")
+
+    # Download and save MPE data
+    df_mpe = pd.read_csv(args.mpe_url, sep=";", encoding="latin-1", dtype=str)
+    df.to_parquet(f"./data/mpe/{output_name_mpe}", index=False, engine="pyarrow")
+    upload_parquet_to_gcs(client, processed_bucket, output_name_mpe, df_mpe)
+
 
 # Run script directly
 if __name__ == "__main__":
